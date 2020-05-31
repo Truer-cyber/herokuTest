@@ -7,7 +7,6 @@ const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
 var pixelsLeft = 1;
-const port = process.env.PORT || 3000;
 
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
@@ -57,7 +56,7 @@ const server = http.createServer(function (req, res) {
 				}
 			});
 			req.on('end', function() {
-				let resBody = {};
+				let resBody = {users:users};
 				try {
 					let j = JSON.parse(body);
 					console.log(j);
@@ -82,7 +81,8 @@ const server = http.createServer(function (req, res) {
 			res.end('200');
 		}
 	}
-});
+	//
+})
 
 const io = require('socket.io')(server);
 
@@ -134,10 +134,10 @@ io.on('connection', socket => {
 	// 
 	let user = getUser(socket.handshake.address);
 	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax, colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
-	/*// disconnections
-	socket.on('disconnect', () => {
+	// disconnections
+	/*socket.on('disconnect', () => {
 		console.log("Connection lost.");
 	});*/
 });
 
-server.listen(port);
+server.listen(8080);
