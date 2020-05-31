@@ -182,32 +182,34 @@
 			context.fillRect(0,0,screenWidth,screenHeight*(1-feCharge/feChargeMax));
 		}
 		// Draw the color bar
-		let cs = (screenHeight<screenWidth)?screenWidth/colors.length:screenHeight/colors.length;
-		let cPos = 0;
-		let i = 0;
-		colors.forEach(c=>{
-			context.fillStyle=c;
-			if (screenHeight<screenWidth) {
-				context.fillRect(cPos,0,cs,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)));
-			} else {
-				context.fillRect(0,cPos,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)),cs);
-			}
-			cPos+=cs;
-			i++;
-		});
-		//drawGrid(context,[0,0]);
-		// Draw the canvas
-		drawCanvas(context);
-		// If the mouse is down and the charge meter is full, attempt to draw a pixel.
-		feCharge = Math.max(0,feCharge-1);
-		if ((mousePos[0]>=canvasX)&&(mousePos[1]>=canvasY)&&(mousePos[0]<canvasX+canvasSize)&&(mousePos[1]<canvasY+canvasSize)&&(feGrid) && (leftMouseDown) && (feCharge==0)) {
-			let gs = canvasSize/feGS;
-			let x = Math.floor((mousePos[0]-canvasX)/(gs));
-			let y = Math.floor((mousePos[1]-canvasY)/(gs));
-			if ((x<canvasSize) && (y<canvasSize)) {
-				feCharge=feChargeMax;
-				let c = selectedColor; // Switch color of clicked pixels
-				sendPixelChange(x,y,c);
+		if (colors) {
+			let cs = (screenHeight<screenWidth)?screenWidth/colors.length:screenHeight/colors.length;
+			let cPos = 0;
+			let i = 0;
+			colors.forEach(c=>{
+				context.fillStyle=c;
+				if (screenHeight<screenWidth) {
+					context.fillRect(cPos,0,cs,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)));
+				} else {
+					context.fillRect(0,cPos,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)),cs);
+				}
+				cPos+=cs;
+				i++;
+			});
+			//drawGrid(context,[0,0]);
+			// Draw the canvas
+			drawCanvas(context);
+			// If the mouse is down and the charge meter is full, attempt to draw a pixel.
+			feCharge = Math.max(0,feCharge-1);
+			if ((mousePos[0]>=canvasX)&&(mousePos[1]>=canvasY)&&(mousePos[0]<canvasX+canvasSize)&&(mousePos[1]<canvasY+canvasSize)&&(feGrid) && (leftMouseDown) && (feCharge==0)) {
+				let gs = canvasSize/feGS;
+				let x = Math.floor((mousePos[0]-canvasX)/(gs));
+				let y = Math.floor((mousePos[1]-canvasY)/(gs));
+				if ((x<canvasSize) && (y<canvasSize)) {
+					feCharge=feChargeMax;
+					let c = selectedColor; // Switch color of clicked pixels
+					sendPixelChange(x,y,c);
+				}
 			}
 		}
 		// Update the game state
