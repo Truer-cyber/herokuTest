@@ -7,7 +7,7 @@ const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
 var pixelsLeft = 1;
-
+/*
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
 	console.log(users);
@@ -20,7 +20,7 @@ function getUser(ip) {
 		return newUser;
 	}
 }
-
+*/
 const server = http.createServer(function (req, res) {
 	console.log(req.url);
 	let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -37,7 +37,7 @@ const server = http.createServer(function (req, res) {
 			res.writeHead(200);
 			res.end(data);
 		});
-	} else {
+	}/* else {
 		// All non-get requests are assumed to be draw requests
 		// For the sake of simplicity.
 		let user = getUser(ip);
@@ -79,11 +79,11 @@ const server = http.createServer(function (req, res) {
 		} else { // Insufficient time has passed since the last submission.
 			res.writeHead('200');
 			res.end('200');
-		}
+		}*/
 	}
 	//
 })
-
+/*
 const io = require('socket.io')(server);
 
 function expandCanvas() {
@@ -139,5 +139,5 @@ io.on('connection', socket => {
 		console.log("Connection lost.");
 	});
 });
-
+*/
 server.listen(8080);
