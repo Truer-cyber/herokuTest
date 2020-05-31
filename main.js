@@ -128,12 +128,12 @@ function drawPix(data) {
 }
 
 io.on('connection', socket => {
-	/*console.log("Connection established with "+socket.handshake.address+".");
+	console.log("Connection established with "+socket.handshake.address+".");
 	// socket.emit => to one client
 	// io.emit => to all clients
 	// 
 	let user = getUser(socket.handshake.address);
-	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax, colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
+	/*socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax, colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
 	// disconnections
 	socket.on('disconnect', () => {
 		console.log("Connection lost.");
