@@ -1,12 +1,13 @@
 var fs = require('fs'),
 		http = require('http');
 
-var users = {};
+/*var users = {};
 const colors = ['#000000','#FFFFFF','#990000','#000099','#999999','#FFAAAA','#009900','#FF00AA','#00AAFF','#990099','#FFFF00','#FFAA00','#FFFFFF88','#6A3805','#D7D7D7','A9B137'];
 const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
-var pixelsLeft = 1;
+var pixelsLeft = 1;*/
+const port = process.env.PORT || 8080;
 /*
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
@@ -140,4 +141,4 @@ io.on('connection', socket => {
 	});
 });
 */
-server.listen(8080);
+server.listen(port);
