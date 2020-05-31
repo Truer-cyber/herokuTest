@@ -37,7 +37,7 @@ const server = http.createServer(function (req, res) {
 			res.writeHead(200);
 			res.end(data);
 		});
-	}/* else {
+	} /*else {
 		// All non-get requests are assumed to be draw requests
 		// For the sake of simplicity.
 		let user = getUser(ip);
@@ -79,10 +79,10 @@ const server = http.createServer(function (req, res) {
 		} else { // Insufficient time has passed since the last submission.
 			res.writeHead('200');
 			res.end('200');
-		}*/
+		}
 	}
-	//
-})
+	//*/
+});
 /*
 const io = require('socket.io')(server);
 
