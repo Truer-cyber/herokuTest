@@ -83,9 +83,9 @@ const server = http.createServer(function (req, res) {
 		}
 	}
 });
-/*
-const io = require('socket.io')(server);
 
+const io = require('socket.io')(server);
+/*
 function expandCanvas() {
 	// In the final version, this will update the database.
 	let newRow = [];
