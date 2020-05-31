@@ -104,6 +104,7 @@
 			if (xhr.readyState==4) {
 				try {
 					let d = JSON.parse(xhr.responseText);
+					console.log(d);
 					if (d.color) {
 						colors.push(d.color);
 					}
