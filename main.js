@@ -57,7 +57,7 @@ const server = http.createServer(function (req, res) {
 				}
 			});
 			req.on('end', function() {
-				let resBody = {users:users};
+				let resBody = {};
 				try {
 					let j = JSON.parse(body);
 					console.log(j);
@@ -133,11 +133,9 @@ io.on('connection', socket => {
 	// socket.emit => to one client
 	// io.emit => to all clients
 	// 
-	let user = getUser(socket.handshake.address);
+	let ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+	let user = getUser(ip);
 	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax,
-		addr: socket.handshake.address,
-		endpt: socket.handshake.headers['x-forwarded-for'],
-		ra: socket.request.connection.remoteAddress,
 		colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
 	// disconnections
 	socket.on('disconnect', () => {
