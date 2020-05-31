@@ -2,6 +2,7 @@
   "name": "risen8192",
   "version": "1.0.0",
   "description": "8192px will never die.",
+  "start": "node main.js"
   "main": "main.js",
   "author": "",
   "dependencies": {
