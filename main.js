@@ -7,6 +7,7 @@ const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
 var pixelsLeft = 1;
+const port = process.env.PORT || 3000;
 
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
@@ -140,4 +141,4 @@ io.on('connection', socket => {
 	});*/
 });
 
-server.listen(8080);
+server.listen(port);
