@@ -133,16 +133,16 @@ io.on('connection', socket => {
 	// socket.emit => to one client
 	// io.emit => to all clients
 	// 
-	/*let user = getUser(socket.handshake.address);
+	let user = getUser(socket.handshake.address);
 	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax,
 		addr: socket.handshake.address,
-		endpt: socket.manager.handshaken[socket.id].address,
+		endpt: socket.handshake.headers['x-forwarded-for'],
 		ra: socket.request.connection.remoteAddress,
 		colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
 	// disconnections
 	socket.on('disconnect', () => {
 		console.log("Connection lost.");
-	});*/
+	});
 });
 
 server.listen(port);
