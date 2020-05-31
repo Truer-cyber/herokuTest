@@ -7,7 +7,7 @@ const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
 var pixelsLeft = 1;*/
-const port = process.env.PORT || 8080;
+const port = process.env.PORT || 3000;
 /*
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
@@ -23,12 +23,12 @@ function getUser(ip) {
 }
 */
 const server = http.createServer(function (req, res) {
-	console.log(req.url);
+	/*console.log(req.url);
 	let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-	console.log(ip);
+	console.log(ip);*/
 	// 
 	if (req.method == "GET") {
-		console.log(req.url);
+		/*console.log(req.url);
 		fs.readFile(__dirname + '/static/index.html', function (err,data) {
 			if (err) {
 				res.writeHead(404);
@@ -37,7 +37,9 @@ const server = http.createServer(function (req, res) {
 			}
 			res.writeHead(200);
 			res.end(data);
-		});
+		});*/
+		res.writeHead(200);
+		res.end(200);
 	} /*else {
 		// All non-get requests are assumed to be draw requests
 		// For the sake of simplicity.
