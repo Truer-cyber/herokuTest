@@ -1,14 +1,14 @@
 var fs = require('fs'),
 		http = require('http');
 
-/*var users = {};
+var users = {};
 const colors = ['#000000','#FFFFFF','#990000','#000099','#999999','#FFAAAA','#009900','#FF00AA','#00AAFF','#990099','#FFFF00','#FFAA00','#FFFFFF88','#6A3805','#D7D7D7','A9B137'];
 const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
-var pixelsLeft = 1;*/
+var pixelsLeft = 1;
 const port = process.env.PORT || 3000;
-/*
+
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
 	console.log(users);
@@ -21,11 +21,11 @@ function getUser(ip) {
 		return newUser;
 	}
 }
-*/
+
 const server = http.createServer(function (req, res) {
-	/*console.log(req.url);
+	console.log(req.url);
 	let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-	console.log(ip);*/
+	console.log(ip);
 	// 
 	if (req.method == "GET") {
 		console.log(req.url);
@@ -38,7 +38,7 @@ const server = http.createServer(function (req, res) {
 			res.writeHead(200);
 			res.end(data);
 		});
-	} /*else {
+	} else {
 		// All non-get requests are assumed to be draw requests
 		// For the sake of simplicity.
 		let user = getUser(ip);
@@ -82,7 +82,6 @@ const server = http.createServer(function (req, res) {
 			res.end('200');
 		}
 	}
-	//*/
 });
 /*
 const io = require('socket.io')(server);
