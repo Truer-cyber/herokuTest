@@ -1,15 +1,19 @@
 {
-  "name": "risen8192",
+  "name": "coolnodeapp",
   "version": "1.0.0",
-  "description": "8192px will never die.",
-  "start": "node main.js",
+  "description": "node app ",
   "main": "main.js",
-  "author": "",
-  "dependencies": {
-    "socket.io": "^2.3.0"
-  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "license": "ISC"
+  "start": "node main.js"
+},
+  "repository": {
+  "type": "git",
+  "url": ""
+},
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+  "url": ""
+},
+  "homepage": ""
 }
