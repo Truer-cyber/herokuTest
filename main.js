@@ -85,7 +85,7 @@ const server = http.createServer(function (req, res) {
 });
 
 const io = require('socket.io')(server);
-/*
+
 function expandCanvas() {
 	// In the final version, this will update the database.
 	let newRow = [];
@@ -126,7 +126,7 @@ function drawPix(data) {
 		
 	}
 }
-
+/*
 io.on('connection', socket => {
 	console.log("Connection established with "+socket.handshake.address+".");
 	// socket.emit => to one client
