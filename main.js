@@ -7,7 +7,7 @@ const chargeMax=50;
 var canvas = [[{color:colors[0],clicked:0}]];
 var canvasSize = 1;
 var pixelsLeft = 1;
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8080;
 
 // Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
 function getUser(ip) {
@@ -136,8 +136,7 @@ io.on('connection', socket => {
 	let user = getUser(socket.handshake.address);
 	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax,
 		addr: socket.handshake.address,
-		aa: socket.handshake.address.address,
-		p: socket.handshake.address.port,
+		endpt: socket.manager.handshaken[socket.id].address,
 		ra: socket.request.connection.remoteAddress,
 		colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
 	// disconnections
