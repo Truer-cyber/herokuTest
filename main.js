@@ -126,9 +126,9 @@ function drawPix(data) {
 		
 	}
 }
-/*
+
 io.on('connection', socket => {
-	console.log("Connection established with "+socket.handshake.address+".");
+	/*console.log("Connection established with "+socket.handshake.address+".");
 	// socket.emit => to one client
 	// io.emit => to all clients
 	// 
@@ -137,7 +137,7 @@ io.on('connection', socket => {
 	// disconnections
 	socket.on('disconnect', () => {
 		console.log("Connection lost.");
-	});
+	});*/
 });
-*/
+
 server.listen(port);
