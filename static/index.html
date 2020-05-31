@@ -1,0 +1,288 @@
+<style type="text/css">
+	html, body { margin:0px; padding:0px }
+
+	canvas {
+		position: absolute;
+		width: 100%;
+		height: 100%;
+		background: #101010;
+	}
+</style>
+
+<canvas id="canvas"></canvas>
+
+<script type="text/javascript">
+	// JS utility functions
+	function isdef(x) {
+		return typeof(x) != 'undefined';
+	}
+	function toHex(x) {
+		return (x>15)?x.toString(16):'0'+x.toString(16);
+	}
+</script>
+
+<!-- Initialization -->
+<script type="text/javascript">
+	var canvas, screenWidth, screenHeight;
+	var leftMouseDown = false;
+	var rightMouseDown = false;
+	var mousePos = [0,0]; 
+
+	// Aesthetic constants
+	const chargeBG = '#AAAAAA';
+	const chargeFront = '#DDDDDD';
+	const colorBarSize = 50;
+	const colorBarPadding = 10;
+
+	window.getAnimationFrame =
+	window.requestAnimationFrame ||
+	window.webkitRequestAnimationFrame ||
+	window.mozRequestAnimationFrame ||
+	window.oRequestAnimationFrame ||
+	window.msRequestAnimationFrame ||
+	function(callback)
+	{
+		window.setTimeout(callback, 16.6);
+	};
+
+	window.onload = function()
+	{
+		canvas = document.getElementById('canvas');
+		context = canvas.getContext('2d');
+
+		window.onresize();
+
+		initControls();
+
+		loop();
+	};
+</script>
+
+<!--
+	Variables
+-->
+<script type="text/javascript">
+	var feGrid;
+	var feGS;
+	//
+	var feCharge=0;
+	var feChargeMax=1;
+	// 
+	var colors;
+	var selectedColor=0;
+</script>
+
+<!--
+	Socket.io
+-->
+<script src="https://cdn.jsdelivr.net/npm/socket.io-client@2.2.0/dist/socket.io.js"></script>
+<script type="text/javascript">
+	const socket = io(window.location.href);
+	// update one pixel
+	socket.on('broadcastPix', x=>{
+		broadcastPix(x.x,x.y,x.c);
+	});
+	// update entire canvas
+	socket.on('canvas', x=>{
+		console.log(x);
+		feChargeMax = x.chargeMax || feChargeMax; // Init feChargeMax and colors if we haven't already done so.
+		colors = x.colors || colors;
+		feGrid = x.canvas;
+		feGS = x.canvas.length;
+	});
+	// POST requests for drawing
+	function sendDrawPix(x,y,c) {
+		let xhr = new XMLHttpRequest();
+		xhr.open('POST', window.location.href, true); //false => not async
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.send(JSON.stringify({
+			x: x,
+			y: y,
+			c: c
+		}));
+		xhr.onreadystatechange=function() {
+			if (xhr.readyState==4) {
+				try {
+					let d = JSON.parse(xhr.responseText);
+					if (d.color) {
+						colors.push(d.color);
+					}
+				} catch(err) {
+					console.log(err);
+				}
+			}
+		};
+	}
+</script>
+
+<!-- 
+
+	Backend connections
+
+-->
+<script type="text/javascript">
+	function broadcastPix(x,y,c) {
+		updateCanvas(x,y,c);
+	}
+
+	function drawPix(x,y,c) {
+		sendDrawPix(x,y,c);
+	}
+</script>
+
+<!--
+
+	Front end
+
+-->
+<script type="text/javascript">
+	//
+	var canvasX;
+	var canvasY;
+	var canvasSize; // The size of the canvas display, NOT the grid size.
+
+	function updateCanvas(x,y,c) {
+		let g = feGrid[y][x];
+		if (isdef(g)) {
+			g.color = c;
+		}
+	}
+
+	function drawCanvas(ctx) {
+		if (isdef(feGrid)) {
+			let gs = canvasSize / feGS;
+			let ax = canvasX;
+			let ay = canvasY;
+			for (let y=0;y<feGS;y++) {
+				ax = canvasX;
+				for (let x=0;x<feGS;x++) {
+					ctx.fillStyle = feGrid[y][x].color;
+					ctx.fillRect(ax,ay,gs,gs);
+					ax += gs;
+				}	
+				ay += gs;
+			}
+		}
+	}
+
+	function sendPixelChange(x,y,c) {
+		drawPix(x,y,c);
+	}
+
+	function keyPress(kc) { }
+
+	function loop() {
+		// Render the screen
+		context.fillStyle = chargeBG;
+		context.fillRect(0,colorBarSize,screenWidth,screenHeight);
+		context.fillStyle = chargeFront;
+		if (screenWidth==canvasSize) {
+			context.fillRect(0,0,screenWidth*(1-feCharge/feChargeMax),screenHeight);
+		} else {
+			context.fillRect(0,0,screenWidth,screenHeight*(1-feCharge/feChargeMax));
+		}
+		// Draw the color bar
+		let cs = (screenHeight<screenWidth)?screenWidth/colors.length:screenHeight/colors.length;
+		let cPos = 0;
+		let i = 0;
+		colors.forEach(c=>{
+			context.fillStyle=c;
+			if (screenHeight<screenWidth) {
+				context.fillRect(cPos,0,cs,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)));
+			} else {
+				context.fillRect(0,cPos,((i==selectedColor)?(colorBarSize):(colorBarSize-colorBarPadding)),cs);
+			}
+			cPos+=cs;
+			i++;
+		});
+		//drawGrid(context,[0,0]);
+		// Draw the canvas
+		drawCanvas(context);
+		// If the mouse is down and the charge meter is full, attempt to draw a pixel.
+		feCharge = Math.max(0,feCharge-1);
+		if ((mousePos[0]>=canvasX)&&(mousePos[1]>=canvasY)&&(mousePos[0]<canvasX+canvasSize)&&(mousePos[1]<canvasY+canvasSize)&&(feGrid) && (leftMouseDown) && (feCharge==0)) {
+			let gs = canvasSize/feGS;
+			let x = Math.floor((mousePos[0]-canvasX)/(gs));
+			let y = Math.floor((mousePos[1]-canvasY)/(gs));
+			if ((x<canvasSize) && (y<canvasSize)) {
+				feCharge=feChargeMax;
+				let c = selectedColor; // Switch color of clicked pixels
+				sendPixelChange(x,y,c);
+			}
+		}
+		// Update the game state
+		getAnimationFrame(loop);
+	}
+
+	window.onresize = function() {
+		if(!canvas) return;
+
+		screenWidth = canvas.clientWidth;
+		screenHeight = canvas.clientHeight;
+
+		canvasSize = Math.min(screenWidth,screenHeight);
+		canvasX = (screenWidth-canvasSize)/2;
+		canvasY = (screenHeight-canvasSize)/2;
+
+		if (screenHeight<screenWidth) {
+			canvasY+=colorBarSize;
+			canvasX+=colorBarSize/2;
+		} else {
+			canvasX+=colorBarSize;
+			canvasY+=colorBarSize/2;
+		}
+		canvasSize-=colorBarSize;
+		canvas.width = screenWidth;
+		canvas.height = screenHeight;
+	};
+
+	function initControls() {
+		window.onkeydown = function(e) {
+			if (keysDown.indexOf(e.keyCode) == -1) keysDown.push(e.keyCode);
+	    	e.preventDefault();
+		};
+
+		window.onkeyup = function(e) {
+			var ix = keysDown.indexOf(e.keyCode);
+			if ( ix != -1) {
+				keysDown.splice(ix, 1);
+				keyPress(e.keyCode);
+			}
+	    	e.preventDefault();
+		};
+
+		window.onmousedown = function(e) {
+			if (e.button == 0) {
+				leftMouseDown = true;
+			} else if (e.button == 2) {
+				rightMouseDown = true;
+			}
+			e.preventDefault();
+		}
+		window.onmouseup = function(e) {
+			if (e.button == 0) {
+				leftMouseDown = false;
+			} else if (e.button == 2) {
+				rightMouseDown = false;
+			}
+			e.preventDefault();
+		}
+		window.oncontextmenu = function(e) {
+			e.preventDefault();
+		}
+
+		window.onmousemove = function(e) {
+			mousePos = [e.clientX, e.clientY];
+			if (screenHeight<screenWidth) {
+				if (mousePos[1]<colorBarSize-colorBarPadding) {
+					selectedColor = Math.floor(mousePos[0]/screenWidth*colors.length);
+				}
+			} else {
+				if (mousePos[0]<colorBarSize-colorBarPadding) {
+					selectedColor = Math.floor(mousePos[1]/screenHeight*colors.length);
+				}
+			}
+			e.preventDefault();
+		}
+	}
+</script>
