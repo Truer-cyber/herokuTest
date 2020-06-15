@@ -1,27 +1,114 @@
+const mongoose = require('mongoose');
+
+const password = require('./pass.json');
+const connectionString = 'mongodb+srv://myAdmin:'+password.password+'@cluster0-wytj9.mongodb.net/<dbname>?retryWrites=true&w=majority';
+
+const connector = mongoose.connect(connectionString);
+
+const user = require('./userSchema.js');
+const User = mongoose.model('user', user, 'user');
+
+const canvas = require('./canvasSchema.js');
+const Canvas = mongoose.model('canvas', canvas, 'canvas');
+
+// Server
 var fs = require('fs'),
 		http = require('http');
+const port = process.env.PORT || 8080
 
-var users = {};
-const colors = ['#000000','#FFFFFF','#990000','#000099','#999999','#FFAAAA','#009900','#FF00AA','#00AAFF','#990099','#FFFF00','#FFAA00','#FFFFFF88','#6A3805','#D7D7D7','A9B137'];
-const chargeMax=50;
-var canvas = [[{color:colors[0],clicked:0}]];
-var canvasSize = 1;
-var pixelsLeft = 1;
-const port = process.env.PORT || 8080;
+// Specific variables
+const cooldown = 50;
+const colors = ['#000000','#FFFFFF','#990000','#000099','#999999','#FFAAAA','#009900','#141414','#FF00AA','#00AAFF','#990099','#FFFF00','#FFAA00','#FF0000','#00FF00','#0000FF','#FFFFFF88','#6A3805','#D7D7D7','#A9B137','#488000'];
 
-// Gets a user for a given IP. Users are {IP, LastEditedAt, EXP} pairings
-function getUser(ip) {
-	console.log(users);
-	// In the future, this will be a database lookup.
+var users = {}; // Maps IPs to click counts and last-clicked times
+var grid = false; // 
+var clicksLeft;
+var pixelsLeft = Infinity;
+
+// Get a user, either from the cache or the DB.
+async function getUser(ip) {
 	if (users[ip]) {
 		return users[ip];
-	} else {
-		let newUser = {IP:ip, LastEditedAt:0, EXP:0};
-		users[ip] = newUser;
-		return newUser;
+	}
+	// Get or create a User
+	let query = {};
+	let update = {};
+	let res = await User.findOne({ipAddress: ip});
+	if (!res) { res = await new User({ipAddress: ip}).save(); }
+	// Add the user to our cache for future reference.
+	users[ip] = {clicks: res.clicks, lastClicked: 0};
+	return users[ip];
+}
+
+//
+async function growCanvas() {
+	let l = grid.length;
+	let newLine = [];
+	for (let i=0; i<l; i++) {
+		let x = '#488000';//colors[(l+i+1)%2];
+		grid[i].push(x);
+		newLine.push('#488000');//colors[(l+i+1)%2]);
+	}
+	newLine.push('#488000');//colors[(l*2+1)%2]);
+	grid.push(newLine);
+	// Broadcast the new canvas to all users
+	broadcastCanvas(grid); // SOCKETIO INTEGRATION
+	//
+	clicksLeft = l**2;//(l+1)*2-1;
+	// Update the stored grid
+	await Canvas.findOneAndReplace({}, { "grid": grid, "clicksLeft": clicksLeft});
+}
+
+// Gets the canvas
+async function getCanvas() {
+	if (grid) {return grid;}
+	// Get canvasSchema.grid, or create one if it doesn't exist
+	let c = await Canvas.findOne({});
+	if (!c) { c = await new Canvas().save(); } 
+	c = c.toObject();
+	clicksLeft = c.clicksLeft;
+	grid = c.grid;
+	return grid;
+}
+
+// Update the canvas with a pixel change, and add a click to the relevant user
+async function updateCanvas(ip, x, y, c) {
+	// Check if the user can click yet
+	let u = await getUser(ip);
+	let t = new Date().getTime();
+	if (u.lastClicked + cooldown*.95 < t) {
+		let cv = await getCanvas();
+		let gs = cv.length;
+		if ((c**2<=u.clicks) && (c<colors.length) && (x<gs) && (y<gs) && (x>=0) && (y>=0)) {
+			// Broadcast the update
+			drawPix(x,y,c); // SOCKETIO INTEGRATION
+			// Update the canvas
+			cv[y][x]=colors[c];
+			clicksLeft--;
+			let update = { 
+				$set: {},
+				$inc: { "clicksLeft": -1 } 
+			}
+			update.$set["grid."+y+"."+x] = colors[c];
+			await Canvas.findOneAndUpdate({}, update); // conditions, update
+			// Add a click to the user
+			u.clicks++;
+			await User.findOneAndUpdate({'ipAddress': ip}, { $inc: {"clicks":1}});
+			// Handle canvas growth
+			if (clicksLeft <= 0) {
+				await growCanvas();
+			}
+		}
 	}
 }
 
+/*
+
+	++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	Create the server
+
+*/
+//*
 const server = http.createServer(function (req, res) {
 	console.log(req.url);
 	let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -41,106 +128,140 @@ const server = http.createServer(function (req, res) {
 	} else {
 		// All non-get requests are assumed to be draw requests
 		// For the sake of simplicity.
-		let user = getUser(ip);
-		// If EXP reaches a threshold, let the user know in the response by sending them a color.
-		let time = new Date().getTime();
-		if ((time) > (user.LastEditedAt+chargeMax*.9)) { // Some leeway.
-			// In the final version, this will be a database call.
-			//
-			let body = '';
-			console.log('non-get');
-			req.on('data', function(data) {
-				body+= data;
-				if (body.length>10000) {
-					res.writeHead('413');
-					res.end('413');
+		// Parse the request body
+		let body = '';
+		console.log('non-get');
+		req.on('data', function(data) {
+			body+= data;
+			if (body.length>10000) {
+				res.writeHead('413');
+				res.end('413');
+			}
+		});
+		// We now have the full request.
+		req.on('end', async function() {
+			let resBody = {};
+			try {
+				let u = await getUser(ip);
+				console.log(u);
+				let j = JSON.parse(body);
+				console.log(j);
+				// Update the canvas and the database
+				await updateCanvas(ip, j.x, j.y, j.c);
+				//
+				let temp = Math.sqrt(u.clicks);
+				if ((temp%1==0)&&(temp<colors.length)) {
+					resBody.color = colors[temp];
 				}
-			});
-			req.on('end', function() {
-				let resBody = {};
-				try {
-					let j = JSON.parse(body);
-					console.log(j);
-					// Set the color
-					j.c=(j.c<=Math.sqrt(user.EXP))?colors[j.c]:colors[0];
-					drawPix(j);
-					//
-					user.LastEditedAt = time;
-					let temp = Math.sqrt(++user.EXP);
-					if ((temp%1==0)&&(temp<colors.length)) {
-						resBody.color = colors[temp];
-					}
-				} catch(err) {
-					console.log(err);
-				} finally {
-					res.writeHead('200');
-					res.end(JSON.stringify(resBody));
-				}
-			});
-		} else { // Insufficient time has passed since the last submission.
-			res.writeHead('200');
-			res.end('200');
-		}
+			} catch(err) {
+				console.log(err);
+			} finally {
+				res.writeHead('200');
+				res.end(JSON.stringify(resBody));
+			}
+		});
 	}
-	//
-})
-
+});
+//*/
+/*
+	Sockets
+*/
+//*
 const io = require('socket.io')(server);
 
-function expandCanvas() {
-	// In the final version, this will update the database.
-	let newRow = [];
-	for (let i=0;i<canvasSize;i++) {
-		canvas[i].push({color:colors[(i+canvasSize)%2], clicked:0});
-		newRow.push({color:colors[(i+canvasSize)%2], clicked:0});
-	}
-	newRow.push({color:colors[(canvasSize+canvasSize)%2], clicked:0});
-	canvas.push(newRow);
-	canvasSize++;
-	pixelsLeft=canvasSize*2-1;
+function drawPix(x,y,c) {
+	io.emit('broadcastPix', {
+		x:x,
+		y:y,
+		c:c
+	});
+}
+
+function broadcastCanvas(grid) {
 	// Broadcast the new canvas
-	io.emit('canvas', {canvas:canvas});
+	io.emit('canvas', {canvas:grid});
 }
 
-// Handle requests from this client.
-function drawPix(data) {
-	let x = data.x;
-	let y = data.y;
-	let c = data.c;
-	if ((x<canvasSize)&&(y<canvasSize)&&(canvas[y][x].color!=c)) {
-		let g = canvas[y][x];
-		g.color=c;
-		io.emit('broadcastPix', {
-			x:x,
-			y:y,
-			c:c
-		});
-		// Expand the canvas if the last pixel has been clicked
-		console.log(g);
-		if (g.clicked==0) {
-			g.clicked=1;
-			if (--pixelsLeft == 0) {
-				expandCanvas();
-			}
-		}
-		console.log(pixelsLeft);
-		
-	}
-}
-
-io.on('connection', socket => {
+io.on('connection', async (socket) => {
 	console.log("Connection established with "+socket.handshake.address+".");
 	// socket.emit => to one client
 	// io.emit => to all clients
-	// 
 	let ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-	let user = getUser(ip);
-	socket.emit('canvas', {canvas:canvas, chargeMax:chargeMax,
-		colors:colors.slice(0,Math.floor(Math.sqrt(user.EXP)+1))});
+	let user = await getUser(ip);
+	console.log('f');
+	let g = await getCanvas();
+	console.log(user);
+	console.log(g);
+	socket.emit('canvas', {
+		canvas:g, 
+		chargeMax:cooldown,
+		colors:colors.slice(0,Math.floor(Math.sqrt(user.clicks)+1))
+	});
 	// disconnections
 	socket.on('disconnect', () => {
 		console.log("Connection lost.");
 	});
 });
+//*/
+/*
 
+	Run the server
+
+*/
+
+//*
 server.listen(port);
+console.log('Listening on port: '+port);
+//*/
+
+/*
+
+	For testing purposes; not used in production.
+
+*/
+
+;(async () => {
+  	// Clear user and canvas
+  	/*
+  	//await User.deleteMany({});
+  	//await Canvas.deleteMany({});
+  	console.log("DB cleared.");
+	console.log('a');
+  	// Create a new user
+  	let u1 = await getUser("userA");
+  	// Create another new user
+  	let u2 = await getUser("userB");
+  	
+  	// Clear the user cache
+  	users = {}; 
+
+  	// Have the second user update the canvas at 1,1
+  	await updateCanvas("userB", 1, 1, 0)
+  	
+  	// Print the contents of everything
+  	console.log('User contents');
+  	let temp = await User.find({});
+  	console.log(temp);
+  	console.log('Canvas contents');
+  	temp = await Canvas.find({});
+  	console.log(temp);
+  	console.log(temp[0].grid[0]);
+  	console.log(temp[0].grid[1]);
+  	console.log(grid);
+  	console.log(clicksLeft);
+  	var s = await findUser('bob');
+
+	const server = http.createServer((req, res) => {
+		res.statusCode = 200;
+		res.setHeader('Content-Type', 'text/html');
+		res.end('<h1>Hello World</h1>' + '<br>' + s);
+	});
+
+	server.listen(port,() => {
+		console.log(`Server running at port `+port);
+	});
+	
+
+	process.exit();
+	//*/
+})();
